@@ -12,8 +12,6 @@ import (
 )
 
 const dburi = "mongodb://localhost:27017"
-const dbName = "hotel-reservation"
-const usercoll = "users"
 
 func main() {
 	var config = fiber.Config{
@@ -35,6 +33,7 @@ func main() {
 	app := fiber.New(config)
 	v1 := app.Group("/api/v1")
 
+	v1.Post("/user", userHandler.HandlePostUser)
 	v1.Get("/user", userHandler.HandleGetUsers)
 	v1.Get("/user/:id", userHandler.HandleGetUser)
 
