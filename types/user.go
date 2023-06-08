@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
 	"regexp"
@@ -14,33 +15,16 @@ const (
 	minPasswordLen  = 7
 )
 
+type UpdateUserParams struct {
+	FirstName string `json:"firstName"`
+	LastName  string `json:"lastName"`
+}
+
 type CreateUserParams struct {
 	FirstName string `json:"firstName"`
 	LastName  string `json:"lastName"`
 	Email     string `json:"email"`
 	Password  string `json:"password"`
-}
-
-func (p CreateUserParams) Validate() []string {
-	var errors []string
-	if len(p.FirstName) < minFirstNameLen {
-		errors = append(errors, fmt.Sprintf("first name can not be shorter than %d", minFirstNameLen))
-	}
-	if len(p.LastName) < minLastNameLen {
-		errors = append(errors, fmt.Sprintf("last name can not be shorter than %d", minLastNameLen))
-	}
-	if len(p.Password) < minPasswordLen {
-		errors = append(errors, fmt.Sprintf("password can not be shorter than %d", minPasswordLen))
-	}
-	if !isEmailValid(p.Email) {
-		errors = append(errors, fmt.Sprintf("email is invalid"))
-	}
-	return errors
-}
-
-func isEmailValid(e string) bool {
-	emailRegex := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
-	return emailRegex.MatchString(e)
 }
 
 type User struct {
@@ -49,6 +33,39 @@ type User struct {
 	LastName          string             `bson:"lastName" json:"lastName"`
 	Email             string             `bson:"email" json:"email"`
 	EncryptedPassword string             `bson:"EncryptedPassword" json:"-"`
+}
+
+func (p UpdateUserParams) ToBSON() bson.M {
+	m := bson.M{}
+	if len(p.FirstName) > 0 {
+		m["firstName"] = p.FirstName
+	}
+	if len(p.LastName) > 0 {
+		m["lastName"] = p.LastName
+	}
+	return m
+}
+
+func (p CreateUserParams) Validate() map[string]string {
+	errors := map[string]string{}
+	if len(p.FirstName) < minFirstNameLen {
+		errors["firstName"] = fmt.Sprintf("first name can not be shorter than %d", minFirstNameLen)
+	}
+	if len(p.LastName) < minLastNameLen {
+		errors["lastName"] = fmt.Sprintf("last name can not be shorter than %d", minLastNameLen)
+	}
+	if len(p.Password) < minPasswordLen {
+		errors["password"] = fmt.Sprintf("password can not be shorter than %d", minPasswordLen)
+	}
+	if !isEmailValid(p.Email) {
+		errors["email"] = fmt.Sprintf("email is invalid")
+	}
+	return errors
+}
+
+func isEmailValid(e string) bool {
+	emailRegex := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
+	return emailRegex.MatchString(e)
 }
 
 func NewUserFromParams(params CreateUserParams) (*User, error) {
