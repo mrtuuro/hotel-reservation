@@ -11,11 +11,6 @@ import (
 	"log"
 )
 
-const (
-	dbName = "hotel-reservation"
-	dburi  = "mongodb://localhost:27017"
-)
-
 func main() {
 	var config = fiber.Config{
 		ErrorHandler: func(ctx *fiber.Ctx, err error) error {
@@ -26,22 +21,28 @@ func main() {
 	listenAddr := flag.String("listenAddr", ":3000", "Server's port")
 	flag.Parse()
 
-	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(dburi))
+	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(db.DBURI))
 	if err != nil {
 		log.Fatal(err)
 	}
 	// handler initialization
-	userHandler := api.NewUserHandler(db.NewMongoUserStore(client, dbName))
-
-	app := fiber.New(config)
-	v1 := app.Group("/api/v1")
-
+	var (
+		userHandler  = api.NewUserHandler(db.NewMongoUserStore(client, db.DBNAME))
+		hotelStore   = db.NewMongoHotelStore(client)
+		roomStore    = db.NewMongoRoomStore(client, hotelStore)
+		hotelHandler = api.NewHotelHandler(hotelStore, roomStore)
+		app          = fiber.New(config)
+		v1           = app.Group("/api/v1")
+	)
+	// User handlers
 	v1.Post("/user", userHandler.HandlePostUser)
 	v1.Get("/user", userHandler.HandleGetUsers)
 	v1.Get("/user/:id", userHandler.HandleGetUser)
 	v1.Put("/user/:id", userHandler.HandlePutUser)
 	v1.Delete("/user/:id", userHandler.HandleDeleteUser)
 
+	// Hotel handlers
+	v1.Get("/hotel", hotelHandler.HandleGetHotels)
 	log.Fatal(app.Listen(*listenAddr))
 
 }
