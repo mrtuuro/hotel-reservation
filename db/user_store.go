@@ -21,6 +21,7 @@ type UserStore interface {
 	Dropper
 
 	GetUserByID(context.Context, string) (*types.User, error)
+	GetUserByEmail(context.Context, string) (*types.User, error)
 	GetUsers(context.Context) ([]*types.User, error)
 	InsertUser(context.Context, *types.User) (*types.User, error)
 	DeleteUserByID(context.Context, string) error
@@ -68,6 +69,14 @@ func (m *MongoUserStore) DeleteUserByID(ctx context.Context, id string) error {
 		return err
 	}
 	return nil
+}
+
+func (m *MongoUserStore) GetUserByEmail(ctx context.Context, email string) (*types.User, error) {
+	var user types.User
+	if err := m.coll.FindOne(ctx, bson.M{"email": email}).Decode(&user); err != nil {
+		return nil, err
+	}
+	return &user, nil
 }
 
 func (m *MongoUserStore) GetUserByID(ctx context.Context, id string) (*types.User, error) {
